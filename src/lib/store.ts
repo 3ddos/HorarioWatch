@@ -59,5 +59,17 @@ export function useAppStore() {
     localStorage.setItem("horariowatch_logs", JSON.stringify(newLogs));
   };
 
-  return { config, saveConfig, logs, addLog, isLoaded };
+  const updateLog = (id: string, updatedLog: Partial<ProcessingLog>) => {
+    const newLogs = logs.map(log => log.id === id ? { ...log, ...updatedLog } : log);
+    setLogs(newLogs);
+    localStorage.setItem("horariowatch_logs", JSON.stringify(newLogs));
+  };
+
+  const deleteLog = (id: string) => {
+    const newLogs = logs.filter(log => log.id !== id);
+    setLogs(newLogs);
+    localStorage.setItem("horariowatch_logs", JSON.stringify(newLogs));
+  };
+
+  return { config, saveConfig, logs, addLog, updateLog, deleteLog, isLoaded };
 }

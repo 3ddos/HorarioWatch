@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { FileText, CheckCircle2, XCircle, Search } from "lucide-react";
+import { FileText, CheckCircle2, XCircle, Search, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function HistoryPage() {
   const { logs, isLoaded } = useAppStore();
@@ -83,9 +84,13 @@ export default function HistoryPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <button className="text-accent hover:underline text-sm font-medium">
+                    <Link 
+                      href={`/history/${log.id}`}
+                      className="inline-flex items-center gap-1 text-accent hover:underline text-sm font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
                       View Details
-                    </button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))
