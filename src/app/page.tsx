@@ -32,11 +32,9 @@ export default function Dashboard() {
 
     setIsProcessing(true);
     
-    // Simulating a real run by using the provided GenAI flow with a dummy PDF data URI
-    // In a real app, we'd fetch the attachment from Gmail first.
     try {
-      // Mock PDF data URI for demonstration
-      const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjQKJ...";
+      // Valid minimal PDF base64 string to prevent decoding errors
+      const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAwCj4+CnN0cmVhbQplbmRzdHJlYW0KZW5kb2JqCnRyYWlsZXIKPDwKL1Jvb3QgMSAwIFIKPj4KJSVFT0YK";
       
       const result = await extractPersonScheduleFromPdf({
         pdfDataUri: dummyPdfUri,
@@ -53,16 +51,24 @@ export default function Dashboard() {
         status: result.schedule.length > 0 ? 'success' : 'failed'
       });
 
-      toast({
-        title: "Processing Complete",
-        description: `Schedule for ${config.targetPerson} has been updated.`,
-      });
+      if (result.schedule.length > 0) {
+        toast({
+          title: "Processing Complete",
+          description: `Schedule for ${config.targetPerson} has been updated.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "No Schedule Found",
+          description: `Could not find a schedule for ${config.targetPerson} in the document.`,
+        });
+      }
     } catch (error) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "Processing Failed",
-        description: "An error occurred while parsing the document.",
+        description: "An error occurred while parsing the document. Please check the logs.",
       });
     } finally {
       setIsProcessing(false);
