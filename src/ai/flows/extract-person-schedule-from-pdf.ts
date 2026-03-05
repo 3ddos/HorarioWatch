@@ -61,7 +61,7 @@ Strict Interpretation Rules:
 - Date Conversion (Spanish Months): 
   'ene' -> 01, 'feb' -> 02, 'mar' -> 03, 'abr' -> 04, 'may' -> 05, 'jun' -> 06,
   'jul' -> 07, 'ago' -> 08, 'sep' -> 09, 'oct' -> 10, 'nov' -> 11, 'dic' -> 12.
-- Final Date Format: ALWAYS DD-MM-YYYY. Use current year (2025) if not specified otherwise.
+- Final Date Format: ALWAYS DD-MM-YYYY. The year comes in the name of the file, for example '26 25ENE-20FEB.xlsx' 26 is the year 2026.
 - Shift 'T' (Tarde): Starts with 'T'. 'T1638' = 16:30 start, 8-hour shift (Output: '16:30 - 00:30').
 - Shift 'M' (Mañana): Starts with 'M'. 'M1008' = 10:00 start, 8-hour shift (Output: '10:00 - 18:00').
 - Off Days: If a cell is empty or contains 'L', 'V', or 'VAC', the person is 'Off'.

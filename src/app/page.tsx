@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useMemo } from "react";
@@ -23,7 +22,6 @@ export default function Dashboard() {
   const lastSuccessfulLog = useMemo(() => logs.find(l => l.status === 'success'), [logs]);
   const recentLogs = useMemo(() => logs.slice(0, 3), [logs]);
 
-  // Map schedule items to Date objects for the calendar
   const scheduledDates = useMemo(() => {
     if (!lastSuccessfulLog) return [];
     return lastSuccessfulLog.schedule.map(item => {
@@ -35,7 +33,6 @@ export default function Dashboard() {
     }).filter((d): d is Date => d !== null);
   }, [lastSuccessfulLog]);
 
-  // Find shift for the selected date
   const selectedShift = useMemo(() => {
     if (!lastSuccessfulLog || !selectedDate) return null;
     return lastSuccessfulLog.schedule.find(item => {
@@ -142,7 +139,7 @@ export default function Dashboard() {
   };
 
   const simulateProcessing = async () => {
-    const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAwCj4+CnN0cmVhbQplbmRzdHJlYW0KZW5kb2JqCnRyYWlsZXIKPDwKL1Jvb3QgMSAwIFIKPj4KJSVFT0YK";
+    const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjQKJ...[rest of dummy pdf data]";
     await processFile("Simulated Schedule.pdf", dummyPdfUri);
   };
 
@@ -229,18 +226,18 @@ export default function Dashboard() {
         <div className="lg:col-span-3 space-y-6">
           <Card className="border-none shadow-sm bg-white min-h-[400px]">
             <CardHeader className="border-b border-muted/20">
-              <CardTitle className="flex items-center gap-2 font-headline">
+              <CardTitle className="flex items-center gap-2 font-headline text-xl">
                 <CalendarIcon className="text-primary w-5 h-5" />
-                Schedule Calendar: {lastSuccessfulLog?.personName || "N/A"}
+                Schedule Calendar
               </CardTitle>
               <CardDescription>
-                Select a highlighted day to view shift details.
+                {lastSuccessfulLog ? `Viewing schedule for ${lastSuccessfulLog.personName}` : "Upload a file to view your schedule."}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {lastSuccessfulLog ? (
-                <div className="flex flex-col md:flex-row gap-8 items-start">
-                  <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50">
+                <div className="flex flex-col md:flex-row gap-8 items-start justify-center">
+                  <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50 mx-auto md:mx-0">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -249,18 +246,13 @@ export default function Dashboard() {
                       modifiers={{
                         hasShift: scheduledDates
                       }}
-                      modifiersStyles={{
-                        hasShift: { 
-                          fontWeight: 'bold', 
-                          backgroundColor: 'hsl(var(--primary) / 0.1)',
-                          color: 'hsl(var(--primary))',
-                          borderRadius: '50%'
-                        }
+                      modifiersClassNames={{
+                        hasShift: "bg-primary/10 text-primary font-bold rounded-full"
                       }}
                     />
                   </div>
                   
-                  <div className="flex-1 space-y-6 w-full">
+                  <div className="flex-1 space-y-6 w-full max-w-sm">
                     <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
                       <h3 className="font-semibold text-primary mb-1 flex items-center gap-2">
                         <Clock className="w-4 h-4" />
