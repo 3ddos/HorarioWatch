@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "app-logo",
+      "description": "Abstract organizational logo",
+      "imageUrl": "https://picsum.photos/seed/horariowatch/200/200",
+      "imageHint": "abstract logo"
+    },
+    {
+      "id": "pdf-thumbnail",
+      "description": "Generic document icon",
+      "imageUrl": "https://picsum.photos/seed/document/400/300",
+      "imageHint": "document paper"
+    }
+  ]
+}
