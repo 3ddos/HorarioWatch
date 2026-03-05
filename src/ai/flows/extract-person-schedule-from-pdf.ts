@@ -1,6 +1,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for extracting a specific person's work schedule from a PDF document.
+ * Handles specific shift codes (T=Tarde, M=Mañana) and converts dates to DD-MM-YYYY.
  *
  * - extractPersonScheduleFromPdf - A function that handles the extraction of a person's schedule.
  * - ExtractPersonScheduleFromPdfInput - The input type for the extractPersonScheduleFromPdf function.
@@ -24,10 +25,10 @@ const ExtractPersonScheduleFromPdfOutputSchema = z.object({
   personName: z.string().describe("The name of the person whose schedule was extracted."),
   schedule: z.array(
     z.object({
-      day: z.string().describe("The day of the week (e.g., 'Monday', 'Tuesday')."),
-      hours: z.string().describe("The working hours for the day (e.g., '9:00 AM - 5:00 PM', 'Off')."),
+      day: z.string().describe("The full date in DD-MM-YYYY format."),
+      hours: z.string().describe("The calculated working hours (e.g., '16:30 - 00:30', 'Off')."),
     })
-  ).describe("An array of working days and hours for the specified person. If the person is not found, this array will be empty."),
+  ).describe("An array of working days and hours for the specified person."),
 });
 export type ExtractPersonScheduleFromPdfOutput = z.infer<typeof ExtractPersonScheduleFromPdfOutputSchema>;
 
@@ -40,27 +41,23 @@ const prompt = ai.definePrompt({
   input: {schema: ExtractPersonScheduleFromPdfInputSchema},
   output: {schema: ExtractPersonScheduleFromPdfOutputSchema},
   prompt: `You are an expert at parsing work schedules from PDF documents.
-Your task is to extract the work schedule for the person named '{{{personName}}}' from the provided PDF content.
+Your task is to extract the work schedule for '{{{personName}}}'.
 
-The PDF contains work schedules for multiple people. Locate the section or row corresponding to '{{{personName}}}' and extract their working days and hours.
+The PDF contains a table where:
+1. Column headers contain dates in 'DD-MMM' format (e.g., '29-ene', '30-ene').
+2. Rows correspond to employees.
+3. Cells contain shift codes like 'T1638' or 'M1008'.
 
-Output the schedule in a JSON array format, where each object has 'day' and 'hours' fields.
-If a person is not found, return an empty schedule array.
-If no specific hours are mentioned for a day, state 'Off' or 'Not Scheduled'.
+Interpretation Rules:
+- Date Conversion: Convert 'DD-MMM' to 'DD-MM-YYYY'. Assume the current year (2024) unless otherwise stated. 'ene' is January, 'feb' is February, etc.
+- Shift 'T' (Tarde): 'T1638' means starting at 16:30 with an 8-hour shift. (Output: '16:30 - 00:30').
+- Shift 'M' (Mañana): 'M1008' means starting at 10:00 with an 8-hour shift. (Output: '10:00 - 18:00').
+- If a cell is empty or says 'OFF' or 'DESC', the person is 'Off'.
 
-Example output format:
-\`\`\`json
-{
-  "personName": "John Doe",
-  "schedule": [
-    { "day": "Monday", "hours": "9:00 AM - 5:00 PM" },
-    { "day": "Tuesday", "hours": "9:00 AM - 5:00 PM" },
-    { "day": "Wednesday", "hours": "Off" },
-    { "day": "Thursday", "hours": "10:00 AM - 6:00 PM" },
-    { "day": "Friday", "hours": "10:00 AM - 6:00 PM" }
-  ]
-}
-\`\`\`
+Output Requirements:
+- Return the schedule in 'DD-MM-YYYY' format.
+- Calculate exact start and end times based on the shift prefix.
+- If the person is not found, return an empty schedule array.
 
 PDF Content: {{media url=pdfDataUri}}`,
 });
