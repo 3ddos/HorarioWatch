@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef } from "react";
@@ -5,9 +6,10 @@ import { useAppStore } from "@/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Play, RotateCw, Calendar, Clock, ArrowRight, Mail, Upload } from "lucide-react";
+import { Play, RotateCw, Calendar, Clock, ArrowRight, Mail, Upload, FileSpreadsheet } from "lucide-react";
 import { extractPersonScheduleFromPdf } from "@/ai/flows/extract-person-schedule-from-pdf";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from 'xlsx';
 
 export default function Dashboard() {
   const { config, logs, addLog, isLoaded } = useAppStore();
@@ -20,7 +22,7 @@ export default function Dashboard() {
   const lastSuccessfulLog = logs.find(l => l.status === 'success');
   const recentLogs = logs.slice(0, 3);
 
-  const processPdf = async (pdfDataUri: string, fileName: string) => {
+  const processFile = async (fileName: string, pdfDataUri?: string, textContent?: string) => {
     if (!config.targetPerson) {
       toast({
         variant: "destructive",
@@ -35,6 +37,7 @@ export default function Dashboard() {
     try {
       const result = await extractPersonScheduleFromPdf({
         pdfDataUri: pdfDataUri,
+        textContent: textContent,
         personName: config.targetPerson
       });
 
@@ -52,7 +55,7 @@ export default function Dashboard() {
       if (result.schedule.length > 0) {
         toast({
           title: "Processing Complete",
-          description: `Schedule for ${config.targetPerson} has been updated.`,
+          description: `Schedule for ${config.targetPerson} has been extracted.`,
         });
       } else {
         toast({
@@ -77,21 +80,33 @@ export default function Dashboard() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== "application/pdf") {
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+
+    if (fileExt === "pdf") {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64DataUri = e.target?.result as string;
+        await processFile(file.name, base64DataUri);
+      };
+      reader.readAsDataURL(file);
+    } else if (fileExt === "csv" || fileExt === "xlsx" || fileExt === "xls") {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+        await processFile(file.name, undefined, csvContent);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
       toast({
         variant: "destructive",
         title: "Invalid File Type",
-        description: "Please upload a PDF document.",
+        description: "Please upload a PDF, CSV, or XLSX document.",
       });
-      return;
     }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64DataUri = e.target?.result as string;
-      await processPdf(base64DataUri, file.name);
-    };
-    reader.readAsDataURL(file);
     
     // Reset input
     if (fileInputRef.current) {
@@ -102,7 +117,7 @@ export default function Dashboard() {
   const simulateProcessing = async () => {
     // Valid minimal PDF base64 string
     const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAwCj4+CnN0cmVhbQplbmRzdHJlYW0KZW5kb2JqCnRyYWlsZXIKPDwKL1Jvb3QgMSAwIFIKPj4KJSVFT0YK";
-    await processPdf(dummyPdfUri, "Simulated Schedule.pdf");
+    await processFile("Simulated Schedule.pdf", dummyPdfUri);
   };
 
   return (
@@ -117,7 +132,7 @@ export default function Dashboard() {
             type="file" 
             ref={fileInputRef} 
             onChange={handleFileUpload} 
-            accept="application/pdf" 
+            accept=".pdf,.csv,.xlsx,.xls" 
             className="hidden" 
           />
           <Button 
@@ -127,7 +142,7 @@ export default function Dashboard() {
             className="border-accent text-accent hover:bg-accent/10"
           >
             <Upload className="mr-2 h-4 w-4" />
-            Upload PDF
+            Upload PDF/Excel
           </Button>
           <Button 
             disabled={isProcessing} 
@@ -147,7 +162,7 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="border-none shadow-sm bg-primary text-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium opacity-80">Processed Emails</CardTitle>
+            <CardTitle className="text-lg font-medium opacity-80">Processed Files</CardTitle>
             <div className="text-4xl font-bold">{logs.length}</div>
           </CardHeader>
           <CardContent>
@@ -179,7 +194,7 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Watching for new Gmail arrivals</p>
+            <p className="text-sm text-muted-foreground">Watching for new files</p>
           </CardContent>
         </Card>
       </div>
@@ -193,7 +208,7 @@ export default function Dashboard() {
                 Latest Schedule: {lastSuccessfulLog?.personName || "N/A"}
               </CardTitle>
               <CardDescription>
-                {lastSuccessfulLog ? `Extracted from: ${lastSuccessfulLog.emailSubject}` : "No schedules processed yet."}
+                {lastSuccessfulLog ? `Extracted from: ${lastSuccessfulLog.emailSubject}` : "No documents processed yet."}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -224,8 +239,8 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
-                  <Mail className="w-16 h-16 opacity-10 mb-4" />
-                  <p>Wait for your first schedule email or trigger a manual scan.</p>
+                  <FileSpreadsheet className="w-16 h-16 opacity-10 mb-4" />
+                  <p>Upload a PDF, CSV, or XLSX file to start extracting schedules.</p>
                 </div>
               )}
             </CardContent>
@@ -265,7 +280,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="text-lg font-headline">AI Processor</CardTitle>
               <CardDescription className="text-accent-foreground/70">
-                Parsing engine is ready to analyze your next PDF attachment.
+                Ready to analyze PDF or spreadsheet documents.
               </CardDescription>
             </CardHeader>
             <CardContent>
