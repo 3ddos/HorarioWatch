@@ -1,18 +1,19 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAppStore } from "@/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Play, RotateCw, Calendar, Clock, ArrowRight, Mail } from "lucide-react";
+import { Play, RotateCw, Calendar, Clock, ArrowRight, Mail, Upload } from "lucide-react";
 import { extractPersonScheduleFromPdf } from "@/ai/flows/extract-person-schedule-from-pdf";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { config, logs, addLog, isLoaded } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   if (!isLoaded) return null;
@@ -20,7 +21,7 @@ export default function Dashboard() {
   const lastSuccessfulLog = logs.find(l => l.status === 'success');
   const recentLogs = logs.slice(0, 3);
 
-  const simulateProcessing = async () => {
+  const processPdf = async (pdfDataUri: string, fileName: string) => {
     if (!config.targetPerson) {
       toast({
         variant: "destructive",
@@ -33,19 +34,16 @@ export default function Dashboard() {
     setIsProcessing(true);
     
     try {
-      // Valid minimal PDF base64 string to prevent decoding errors
-      const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAwCj4+CnN0cmVhbQplbmRzdHJlYW0KZW5kb2JqCnRyYWlsZXIKPDwKL1Jvb3QgMSAwIFIKPj4KJSVFT0YK";
-      
       const result = await extractPersonScheduleFromPdf({
-        pdfDataUri: dummyPdfUri,
+        pdfDataUri: pdfDataUri,
         personName: config.targetPerson
       });
 
       addLog({
         id: Math.random().toString(36).substr(2, 9),
         timestamp: new Date().toISOString(),
-        emailSubject: `Weekly Schedule PDF - ${new Date().toLocaleDateString()}`,
-        sender: config.senderFilter,
+        emailSubject: `Manual Upload: ${fileName}`,
+        sender: "Manual Upload",
         personName: config.targetPerson,
         schedule: result.schedule,
         status: result.schedule.length > 0 ? 'success' : 'failed'
@@ -75,6 +73,38 @@ export default function Dashboard() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast({
+        variant: "destructive",
+        title: "Invalid File Type",
+        description: "Please upload a PDF document.",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64DataUri = e.target?.result as string;
+      await processPdf(base64DataUri, file.name);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const simulateProcessing = async () => {
+    // Valid minimal PDF base64 string
+    const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAwCj4+CnN0cmVhbQplbmRzdHJlYW0KZW5kb2JqCnRyYWlsZXIKPDwKL1Jvb3QgMSAwIFIKPj4KJSVFT0YK";
+    await processPdf(dummyPdfUri, "Simulated Schedule.pdf");
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -82,18 +112,36 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold font-headline tracking-tight text-primary">Overview</h1>
           <p className="text-muted-foreground mt-2">Welcome back. Everything is running smoothly.</p>
         </div>
-        <Button 
-          disabled={isProcessing} 
-          onClick={simulateProcessing}
-          className="bg-accent text-accent-foreground hover:bg-accent/90"
-        >
-          {isProcessing ? (
-            <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Play className="mr-2 h-4 w-4 fill-current" />
-          )}
-          Trigger Manual Scan
-        </Button>
+        <div className="flex gap-3">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            accept="application/pdf" 
+            className="hidden" 
+          />
+          <Button 
+            variant="outline"
+            disabled={isProcessing} 
+            onClick={() => fileInputRef.current?.click()}
+            className="border-accent text-accent hover:bg-accent/10"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload PDF
+          </Button>
+          <Button 
+            disabled={isProcessing} 
+            onClick={simulateProcessing}
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
+          >
+            {isProcessing ? (
+              <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-4 w-4 fill-current" />
+            )}
+            Trigger Manual Scan
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -103,7 +151,7 @@ export default function Dashboard() {
             <div className="text-4xl font-bold">{logs.length}</div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm opacity-60">Total emails scanned this month</p>
+            <p className="text-sm opacity-60">Total documents scanned</p>
           </CardContent>
         </Card>
 
@@ -192,7 +240,7 @@ export default function Dashboard() {
                   <div key={log.id} className="flex gap-4 items-start pb-4 last:pb-0 border-b last:border-0 border-muted/20">
                     <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${log.status === 'success' ? 'bg-green-500' : 'bg-destructive'}`} />
                     <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">{log.emailSubject}</p>
+                      <p className="text-sm font-medium leading-none truncate max-w-[200px]">{log.emailSubject}</p>
                       <p className="text-xs text-muted-foreground">{new Date(log.timestamp).toLocaleTimeString()}</p>
                     </div>
                   </div>
@@ -219,9 +267,9 @@ export default function Dashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-medium mb-1">
                   <span>Usage Limits</span>
-                  <span>92 / 1,000</span>
+                  <span>{logs.length} / 1,000</span>
                 </div>
-                <Progress value={9.2} className="h-1.5 bg-white/20" />
+                <Progress value={(logs.length / 1000) * 100} className="h-1.5 bg-white/20" />
               </div>
             </CardContent>
           </Card>
