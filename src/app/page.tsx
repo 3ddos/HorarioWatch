@@ -1,19 +1,22 @@
 
 "use client";
 
-import { useState, useRef } from "react";
-import { useAppStore } from "@/lib/store";
+import { useState, useRef, useMemo } from "react";
+import { useAppStore, ScheduleItem } from "@/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Play, RotateCw, Calendar, Clock, ArrowRight, Mail, Upload, FileSpreadsheet } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Play, RotateCw, Clock, ArrowRight, Upload, FileSpreadsheet, Calendar as CalendarIcon, Info } from "lucide-react";
 import { extractPersonScheduleFromPdf } from "@/ai/flows/extract-person-schedule-from-pdf";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
+import { parse, isSameDay, format } from "date-fns";
 
 export default function Dashboard() {
   const { config, logs, addLog, isLoaded } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -21,6 +24,31 @@ export default function Dashboard() {
 
   const lastSuccessfulLog = logs.find(l => l.status === 'success');
   const recentLogs = logs.slice(0, 3);
+
+  // Map schedule items to Date objects for the calendar
+  const scheduledDates = useMemo(() => {
+    if (!lastSuccessfulLog) return [];
+    return lastSuccessfulLog.schedule.map(item => {
+      try {
+        return parse(item.day, "dd-MM-yyyy", new Date());
+      } catch (e) {
+        return null;
+      }
+    }).filter((d): d is Date => d !== null);
+  }, [lastSuccessfulLog]);
+
+  // Find shift for the selected date
+  const selectedShift = useMemo(() => {
+    if (!lastSuccessfulLog || !selectedDate) return null;
+    return lastSuccessfulLog.schedule.find(item => {
+      try {
+        const itemDate = parse(item.day, "dd-MM-yyyy", new Date());
+        return isSameDay(itemDate, selectedDate);
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [lastSuccessfulLog, selectedDate]);
 
   const processFile = async (fileName: string, pdfDataUri?: string, textContent?: string) => {
     if (!config.targetPerson) {
@@ -108,14 +136,12 @@ export default function Dashboard() {
       });
     }
     
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   const simulateProcessing = async () => {
-    // Valid minimal PDF base64 string
     const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAwCj4+CnN0cmVhbQplbmRzdHJlYW0KZW5kb2JqCnRyYWlsZXIKPDwKL1Jvb3QgMSAwIFIKPj4KJSVFT0YK";
     await processFile("Simulated Schedule.pdf", dummyPdfUri);
   };
@@ -204,43 +230,77 @@ export default function Dashboard() {
           <Card className="border-none shadow-sm bg-white min-h-[400px]">
             <CardHeader className="border-b border-muted/20">
               <CardTitle className="flex items-center gap-2 font-headline">
-                <Calendar className="text-primary w-5 h-5" />
-                Latest Schedule: {lastSuccessfulLog?.personName || "N/A"}
+                <CalendarIcon className="text-primary w-5 h-5" />
+                Schedule Calendar: {lastSuccessfulLog?.personName || "N/A"}
               </CardTitle>
               <CardDescription>
-                {lastSuccessfulLog ? `Extracted from: ${lastSuccessfulLog.emailSubject}` : "No documents processed yet."}
+                Select a highlighted day to view shift details.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {lastSuccessfulLog ? (
-                <div className="grid gap-4">
-                  {lastSuccessfulLog.schedule.map((item, idx) => (
-                    <div 
-                      key={idx} 
-                      className="flex items-center justify-between p-4 rounded-xl bg-muted/20 border border-muted/50 hover:border-accent/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="bg-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-primary text-sm shadow-sm group-hover:bg-accent group-hover:text-white transition-colors">
-                          {item.day.charAt(0)}
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-md border-none"
+                      modifiers={{
+                        hasShift: scheduledDates
+                      }}
+                      modifiersStyles={{
+                        hasShift: { 
+                          fontWeight: 'bold', 
+                          backgroundColor: 'hsl(var(--primary) / 0.1)',
+                          color: 'hsl(var(--primary))',
+                          borderRadius: '50%'
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="flex-1 space-y-6 w-full">
+                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                      <h3 className="font-semibold text-primary mb-1 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Selected Date
+                      </h3>
+                      <p className="text-lg font-bold">
+                        {selectedDate ? format(selectedDate, "PPP") : "No date selected"}
+                      </p>
+                    </div>
+
+                    {selectedShift ? (
+                      <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                        <div className="flex items-center justify-between p-6 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+                          <div className="space-y-1">
+                            <span className="text-xs uppercase tracking-wider opacity-80">Working Hours</span>
+                            <div className="text-2xl font-bold">{selectedShift.hours}</div>
+                          </div>
+                          <div className="bg-white/20 p-3 rounded-full">
+                            <Clock className="w-6 h-6" />
+                          </div>
                         </div>
-                        <span className="font-semibold text-lg">{item.day}</span>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-2 text-primary font-medium bg-white px-4 py-2 rounded-full shadow-sm border border-border">
-                          <Clock className="w-4 h-4" />
-                          {item.hours}
-                        </div>
-                        {item.rawCellData && (
-                          <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">Raw: {item.rawCellData}</span>
+                        {selectedShift.rawCellData && (
+                          <div className="mt-4 flex items-start gap-2 p-3 bg-muted/30 rounded-lg text-xs text-muted-foreground border border-muted">
+                            <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                            <p>Parsed from document cell: <span className="font-mono font-semibold text-primary">{selectedShift.rawCellData}</span></p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground bg-muted/10 rounded-2xl border-2 border-dashed">
+                        <Clock className="w-10 h-10 opacity-20 mb-2" />
+                        <p>No shift scheduled for this day.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full py-20 text-muted-foreground">
                   <FileSpreadsheet className="w-16 h-16 opacity-10 mb-4" />
-                  <p>Upload a PDF, CSV, or XLSX file to start extracting schedules.</p>
+                  <p>Upload a file to see your schedule on the calendar.</p>
                 </div>
               )}
             </CardContent>
