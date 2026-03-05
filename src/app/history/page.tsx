@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { FileText, CheckCircle2, XCircle, Search, ExternalLink, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -29,12 +29,12 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  if (!isLoaded) return null;
-
-  const filteredLogs = logs.filter(log => 
+  const filteredLogs = useMemo(() => logs.filter(log => 
     log.emailSubject.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.personName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [logs, searchTerm]);
+
+  if (!isLoaded) return null;
 
   const handleDelete = (id: string) => {
     deleteLog(id);

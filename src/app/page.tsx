@@ -20,10 +20,8 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  if (!isLoaded) return null;
-
-  const lastSuccessfulLog = logs.find(l => l.status === 'success');
-  const recentLogs = logs.slice(0, 3);
+  const lastSuccessfulLog = useMemo(() => logs.find(l => l.status === 'success'), [logs]);
+  const recentLogs = useMemo(() => logs.slice(0, 3), [logs]);
 
   // Map schedule items to Date objects for the calendar
   const scheduledDates = useMemo(() => {
@@ -49,6 +47,8 @@ export default function Dashboard() {
       }
     });
   }, [lastSuccessfulLog, selectedDate]);
+
+  if (!isLoaded) return null;
 
   const processFile = async (fileName: string, pdfDataUri?: string, textContent?: string) => {
     if (!config.targetPerson) {
