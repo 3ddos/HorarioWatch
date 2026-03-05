@@ -49,10 +49,10 @@ The PDF contains a table where:
 3. Cells contain shift codes like 'T1638' or 'M1008'.
 
 Interpretation Rules:
-- Date Conversion: Convert 'DD-MMM' to 'DD-MM-YYYY'. Assume the current year (2024) unless otherwise stated. 'ene' is January, 'feb' is February, etc.
+- Date Conversion: Convert 'DD-MMM' to 'DD-MM-YYYY'. Assume the current year (2026) unless otherwise stated. 'ene' is January, 'feb' is February, etc.
 - Shift 'T' (Tarde): 'T1638' means starting at 16:30 with an 8-hour shift. (Output: '16:30 - 00:30').
 - Shift 'M' (Mañana): 'M1008' means starting at 10:00 with an 8-hour shift. (Output: '10:00 - 18:00').
-- If a cell is empty or says 'OFF' or 'DESC', the person is 'Off'.
+- If a cell is empty or says 'L' or 'V', the person is 'Off'.
 
 Output Requirements:
 - Return the schedule in 'DD-MM-YYYY' format.

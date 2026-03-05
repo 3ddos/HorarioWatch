@@ -6,14 +6,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { FileText, CheckCircle2, XCircle, Search, ExternalLink } from "lucide-react";
+import { FileText, CheckCircle2, XCircle, Search, ExternalLink, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 
 export default function HistoryPage() {
-  const { logs, isLoaded } = useAppStore();
+  const { logs, isLoaded, deleteLog } = useAppStore();
   const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
 
   if (!isLoaded) return null;
 
@@ -21,6 +35,14 @@ export default function HistoryPage() {
     log.emailSubject.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.personName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDelete = (id: string) => {
+    deleteLog(id);
+    toast({
+      title: "Log Deleted",
+      description: "The activity log and its data have been removed.",
+    });
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -84,13 +106,44 @@ export default function HistoryPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link 
-                      href={`/history/${log.id}`}
-                      className="inline-flex items-center gap-1 text-accent hover:underline text-sm font-medium"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      View Details
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link 
+                        href={`/history/${log.id}`}
+                        className="inline-flex items-center gap-1 text-accent hover:underline text-sm font-medium mr-2"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        View Details
+                      </Link>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Activity Log</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete the log for &quot;{log.emailSubject}&quot;? This action will permanently remove all schedule items associated with it.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(log.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
