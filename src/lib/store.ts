@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,6 +13,7 @@ export interface Config {
 export interface ScheduleItem {
   day: string;
   hours: string;
+  rawCellData?: string;
 }
 
 export interface ProcessingLog {
@@ -24,6 +24,7 @@ export interface ProcessingLog {
   personName: string;
   schedule: ScheduleItem[];
   status: 'success' | 'failed';
+  reasoning?: string;
 }
 
 const DEFAULT_CONFIG: Config = {

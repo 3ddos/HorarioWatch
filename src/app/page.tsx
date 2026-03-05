@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef } from "react";
@@ -46,6 +45,7 @@ export default function Dashboard() {
         sender: "Manual Upload",
         personName: config.targetPerson,
         schedule: result.schedule,
+        reasoning: result.reasoning,
         status: result.schedule.length > 0 ? 'success' : 'failed'
       });
 
@@ -210,9 +210,14 @@ export default function Dashboard() {
                         </div>
                         <span className="font-semibold text-lg">{item.day}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-primary font-medium bg-white px-4 py-2 rounded-full shadow-sm border border-border">
-                        <Clock className="w-4 h-4" />
-                        {item.hours}
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 text-primary font-medium bg-white px-4 py-2 rounded-full shadow-sm border border-border">
+                          <Clock className="w-4 h-4" />
+                          {item.hours}
+                        </div>
+                        {item.rawCellData && (
+                          <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">Raw: {item.rawCellData}</span>
+                        )}
                       </div>
                     </div>
                   ))}

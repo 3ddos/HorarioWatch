@@ -23,10 +23,12 @@ export type ExtractPersonScheduleFromPdfInput = z.infer<typeof ExtractPersonSche
 
 const ExtractPersonScheduleFromPdfOutputSchema = z.object({
   personName: z.string().describe("The name of the person whose schedule was extracted."),
+  reasoning: z.string().describe("A summary of how the data was found and interpreted for debugging purposes."),
   schedule: z.array(
     z.object({
       day: z.string().describe("The full date in DD-MM-YYYY format."),
       hours: z.string().describe("The calculated working hours (e.g., '16:30 - 00:30', 'Off')."),
+      rawCellData: z.string().describe("The raw text found in the cell (for debugging)."),
     })
   ).describe("An array of working days and hours for the specified person."),
 });
@@ -44,20 +46,32 @@ const prompt = ai.definePrompt({
 Your task is to extract the work schedule for '{{{personName}}}'.
 
 The PDF contains a table where:
-1. Column headers contain dates in 'DD-MMM' format (e.g., '29-ene', '30-ene').
+1. Column headers contain dates in 'DD-MMM' format in Spanish (e.g., '29-ene', '30-ene', '01-feb').
 2. Rows correspond to employees.
 3. Cells contain shift codes like 'T1638' or 'M1008'.
 
-Interpretation Rules:
-- Date Conversion: Convert 'DD-MMM' to 'DD-MM-YYYY'. Assume the current year (2026) unless otherwise stated. 'ene' is January, 'feb' is February, etc.
-- Shift 'T' (Tarde): 'T1638' means starting at 16:30 with an 8-hour shift. (Output: '16:30 - 00:30').
-- Shift 'M' (Mañana): 'M1008' means starting at 10:00 with an 8-hour shift. (Output: '10:00 - 18:00').
-- If a cell is empty or says 'L' or 'V', the person is 'Off'.
+Strict Interpretation Rules:
+- Date Conversion (Spanish Months): 
+  'ene' -> 01 (January)
+  'feb' -> 02 (February)
+  'mar' -> 03 (March)
+  'abr' -> 04 (April)
+  'may' -> 05 (May)
+  'jun' -> 06 (June)
+  'jul' -> 07 (July)
+  'ago' -> 08 (August)
+  'sep' -> 09 (September)
+  'oct' -> 10 (October)
+  'nov' -> 11 (November)
+  'dic' -> 12 (December)
+- Final Date Format: ALWAYS DD-MM-YYYY (use 2026 as the year).
+- Shift 'T' (Tarde): Starts with 'T'. Example: 'T1638' means starting at 16:30 with an 8-hour shift. (Output: '16:30 - 00:30').
+- Shift 'M' (Mañana): Starts with 'M'. Example: 'M1008' means starting at 10:00 with an 8-hour shift. (Output: '10:00 - 18:00').
+- Off Days: If a cell is empty or contains 'L', 'V', or 'VAC', the person is 'Off'.
 
-Output Requirements:
-- Return the schedule in 'DD-MM-YYYY' format.
-- Calculate exact start and end times based on the shift prefix.
-- If the person is not found, return an empty schedule array.
+Debugging Requirements:
+- In the 'reasoning' field, explain which row you found for '{{{personName}}}' and how you mapped the columns.
+- For each schedule item, include 'rawCellData' showing exactly what was written in the PDF cell.
 
 PDF Content: {{media url=pdfDataUri}}`,
 });

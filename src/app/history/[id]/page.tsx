@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAppStore, ScheduleItem } from "@/lib/store";
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Trash2, Plus, Clock, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Plus, Clock, Calendar as CalendarIcon, Info, Bug } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -22,6 +21,7 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LogDetailsPage() {
   const { id } = useParams() as { id: string };
@@ -58,7 +58,7 @@ export default function LogDetailsPage() {
   };
 
   const handleAddItem = () => {
-    setSchedule([...schedule, { day: "New Day", hours: "9:00 AM - 5:00 PM" }]);
+    setSchedule([...schedule, { day: format(new Date(), "dd-MM-yyyy"), hours: "09:00 - 17:00" }]);
   };
 
   const handleSaveChanges = () => {
@@ -119,6 +119,16 @@ export default function LogDetailsPage() {
         </div>
       </div>
 
+      {log.reasoning && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <Bug className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-800">AI Extraction Reasoning (Debug Info)</AlertTitle>
+          <AlertDescription className="text-blue-700 mt-2 whitespace-pre-wrap">
+            {log.reasoning}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-1 space-y-6">
           <Card className="border-none shadow-sm bg-white">
@@ -161,34 +171,42 @@ export default function LogDetailsPage() {
             <CardContent className="pt-6">
               <div className="space-y-4">
                 {schedule.map((item, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-muted/20 border border-muted/50 group">
-                    <div className="flex-1 w-full space-y-1">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Day of Week</Label>
-                      <Input 
-                        value={item.day} 
-                        onChange={(e) => handleUpdateItem(index, "day", e.target.value)}
-                        className="bg-white border-muted"
-                      />
-                    </div>
-                    <div className="flex-[1.5] w-full space-y-1">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Working Hours</Label>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <div key={index} className="flex flex-col gap-2 p-4 rounded-xl bg-muted/20 border border-muted/50 group">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="flex-1 w-full space-y-1">
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Date (DD-MM-YYYY)</Label>
                         <Input 
-                          value={item.hours} 
-                          onChange={(e) => handleUpdateItem(index, "hours", e.target.value)}
-                          className="pl-10 bg-white border-muted"
+                          value={item.day} 
+                          onChange={(e) => handleUpdateItem(index, "day", e.target.value)}
+                          className="bg-white border-muted"
                         />
                       </div>
+                      <div className="flex-[1.5] w-full space-y-1">
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Working Hours</Label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input 
+                            value={item.hours} 
+                            onChange={(e) => handleUpdateItem(index, "hours", e.target.value)}
+                            className="pl-10 bg-white border-muted"
+                          />
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="mt-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="mt-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleRemoveItem(index)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {item.rawCellData && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Info className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground italic">Raw PDF data: "{item.rawCellData}"</span>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {schedule.length === 0 && (
