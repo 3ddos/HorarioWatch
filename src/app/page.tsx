@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import { useAppStore, ScheduleItem } from "@/lib/store";
+import { useAppStore } from "@/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -237,7 +237,7 @@ export default function Dashboard() {
             <CardContent className="pt-6">
               {lastSuccessfulLog ? (
                 <div className="flex flex-col md:flex-row gap-8 items-start justify-center">
-                  <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50 mx-auto md:mx-0">
+                  <div className="p-4 bg-muted/20 rounded-2xl border border-muted/50 w-fit mx-auto md:mx-0 shrink-0">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -247,7 +247,7 @@ export default function Dashboard() {
                         hasShift: scheduledDates
                       }}
                       modifiersClassNames={{
-                        hasShift: "bg-primary/10 text-primary font-bold rounded-full"
+                        hasShift: "bg-primary/20 text-primary font-bold hover:bg-primary/30"
                       }}
                     />
                   </div>
