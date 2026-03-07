@@ -13,7 +13,7 @@ import * as XLSX from 'xlsx';
 import { parse, isSameDay, format } from "date-fns";
 
 export default function Dashboard() {
-  const { config, logs, addLog, isLoaded } = useAppStore();
+  const { config, logs, addLog, isLoaded, user } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +26,7 @@ export default function Dashboard() {
     if (!lastSuccessfulLog) return [];
     return lastSuccessfulLog.schedule.map(item => {
       try {
-        return parse(item.day, "dd-MM-yyyy", new Date());
+        return parse(item.day, "yyyy-MM-dd", new Date());
       } catch (e) {
         return null;
       }
@@ -37,7 +37,7 @@ export default function Dashboard() {
     if (!lastSuccessfulLog || !selectedDate) return null;
     return lastSuccessfulLog.schedule.find(item => {
       try {
-        const itemDate = parse(item.day, "dd-MM-yyyy", new Date());
+        const itemDate = parse(item.day, "yyyy-MM-dd", new Date());
         return isSameDay(itemDate, selectedDate);
       } catch (e) {
         return false;
@@ -48,7 +48,7 @@ export default function Dashboard() {
   if (!isLoaded) return null;
 
   const processFile = async (fileName: string, pdfDataUri?: string, textContent?: string) => {
-    if (!config.targetPerson) {
+    if (!user?.name) {
       toast({
         variant: "destructive",
         title: "Configuration Missing",
@@ -58,12 +58,12 @@ export default function Dashboard() {
     }
 
     setIsProcessing(true);
-    
+
     try {
       const result = await extractPersonScheduleFromPdf({
         pdfDataUri: pdfDataUri,
         textContent: textContent,
-        personName: config.targetPerson
+        personName: user.name
       });
 
       addLog({
@@ -71,7 +71,7 @@ export default function Dashboard() {
         timestamp: new Date().toISOString(),
         emailSubject: `Manual Upload: ${fileName}`,
         sender: "Manual Upload",
-        personName: config.targetPerson,
+        personName: user.name,
         schedule: result.schedule,
         reasoning: result.reasoning,
         status: result.schedule.length > 0 ? 'success' : 'failed'
@@ -80,13 +80,13 @@ export default function Dashboard() {
       if (result.schedule.length > 0) {
         toast({
           title: "Processing Complete",
-          description: `Schedule for ${config.targetPerson} has been extracted.`,
+          description: `Schedule for ${user.name} has been extracted.`,
         });
       } else {
         toast({
           variant: "destructive",
           title: "No Schedule Found",
-          description: `Could not find a schedule for ${config.targetPerson} in the document.`,
+          description: `Could not find a schedule for ${user.name} in the document.`,
         });
       }
     } catch (error) {
@@ -132,7 +132,7 @@ export default function Dashboard() {
         description: "Please upload a PDF, CSV, or XLSX document.",
       });
     }
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -151,24 +151,24 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-2">Welcome back. Everything is running smoothly.</p>
         </div>
         <div className="flex gap-3">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            accept=".pdf,.csv,.xlsx,.xls" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".pdf,.csv,.xlsx,.xls"
+            className="hidden"
           />
-          <Button 
+          <Button
             variant="outline"
-            disabled={isProcessing} 
+            disabled={isProcessing}
             onClick={() => fileInputRef.current?.click()}
             className="border-accent text-accent hover:bg-accent/10"
           >
             <Upload className="mr-2 h-4 w-4" />
             Upload PDF/Excel
           </Button>
-          <Button 
-            disabled={isProcessing} 
+          <Button
+            disabled={isProcessing}
             onClick={simulateProcessing}
             className="bg-accent text-accent-foreground hover:bg-accent/90"
           >
@@ -197,7 +197,7 @@ export default function Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-medium text-muted-foreground">Target Person</CardTitle>
             <div className="text-2xl font-bold text-primary truncate">
-              {config.targetPerson || "Not configured"}
+              {user?.name || "Not configured"}
             </div>
           </CardHeader>
           <CardContent>
@@ -251,7 +251,7 @@ export default function Dashboard() {
                       }}
                     />
                   </div>
-                  
+
                   <div className="flex-1 space-y-6 w-full max-w-sm">
                     <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
                       <h3 className="font-semibold text-primary mb-1 flex items-center gap-2">

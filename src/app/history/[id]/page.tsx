@@ -10,16 +10,16 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Trash2, Plus, Clock, Calendar as CalendarIcon, Info, Bug } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -58,7 +58,7 @@ export default function LogDetailsPage() {
   };
 
   const handleAddItem = () => {
-    setSchedule([...schedule, { day: format(new Date(), "dd-MM-yyyy"), hours: "09:00 - 17:00" }]);
+    setSchedule([...schedule, { day: format(new Date(), "yyyy-MM-dd"), hours: "09:00 - 17:00" }]);
   };
 
   const handleSaveChanges = () => {
@@ -81,9 +81,9 @@ export default function LogDetailsPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          onClick={() => router.back()} 
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
           className="text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -174,9 +174,9 @@ export default function LogDetailsPage() {
                   <div key={index} className="flex flex-col gap-2 p-4 rounded-xl bg-muted/20 border border-muted/50 group">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                       <div className="flex-1 w-full space-y-1">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Date (DD-MM-YYYY)</Label>
-                        <Input 
-                          value={item.day} 
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Date (YYYY-MM-DD)</Label>
+                        <Input
+                          value={item.day}
                           onChange={(e) => handleUpdateItem(index, "day", e.target.value)}
                           className="bg-white border-muted"
                         />
@@ -185,16 +185,16 @@ export default function LogDetailsPage() {
                         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Working Hours</Label>
                         <div className="relative">
                           <Clock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                          <Input 
-                            value={item.hours} 
+                          <Input
+                            value={item.hours}
                             onChange={(e) => handleUpdateItem(index, "hours", e.target.value)}
                             className="pl-10 bg-white border-muted"
                           />
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="mt-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleRemoveItem(index)}
                       >

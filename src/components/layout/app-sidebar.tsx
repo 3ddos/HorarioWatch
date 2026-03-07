@@ -1,9 +1,10 @@
 
 "use client";
 
-import { LayoutDashboard, Settings, History, Calendar, Mail } from "lucide-react";
+import { LayoutDashboard, Settings, History, Calendar, Mail, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAppStore } from "@/lib/store";
 import {
   Sidebar,
   SidebarContent,
@@ -15,16 +16,27 @@ import {
   SidebarGroupLabel,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { signOut } = useAppStore();
+  const router = useRouter();
 
   const menuItems = [
     { title: "Dashboard", icon: LayoutDashboard, href: "/" },
     { title: "Configuration", icon: Settings, href: "/config" },
     { title: "Activity History", icon: History, href: "/history" },
   ];
+
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/login");
+  };
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -56,9 +68,18 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4 group-data-[collapsible=icon]:hidden">
-        <div className="bg-white/10 rounded-lg p-3 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs font-medium text-white/80">Watcher Active</span>
+        <div className="flex flex-col gap-4">
+          <div className="bg-white/10 rounded-lg p-3 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs font-medium text-white/80">Watcher Active</span>
+          </div>
+          <button
+            onClick={() => handleSignOut()}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-300 hover:bg-white/10 hover:text-red-400 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign out</span>
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>

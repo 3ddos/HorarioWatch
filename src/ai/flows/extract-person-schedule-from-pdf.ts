@@ -2,15 +2,15 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for extracting a specific person's work schedule from a document (PDF or Spreadsheet text).
- * Handles specific shift codes (T=Tarde, M=Mañana) and converts dates to DD-MM-YYYY.
+ * Handles specific shift codes (T=Tarde, M=Mañana) and converts dates to YYYY-MM-DD.
  *
  * - extractPersonSchedule - A function that handles the extraction process.
  * - ExtractPersonScheduleInput - The input type for the function.
  * - ExtractPersonScheduleOutput - The return type for the function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const ExtractPersonScheduleInputSchema = z.object({
   pdfDataUri: z
@@ -32,7 +32,7 @@ const ExtractPersonScheduleOutputSchema = z.object({
   reasoning: z.string().describe("A summary of how the data was found and interpreted for debugging purposes."),
   schedule: z.array(
     z.object({
-      day: z.string().describe("The full date in DD-MM-YYYY format."),
+      day: z.string().describe("The full date in YYYY-MM-DD format."),
       hours: z.string().describe("The calculated working hours (e.g., '16:30 - 00:30', 'Off')."),
       rawCellData: z.string().describe("The raw text found in the cell (for debugging)."),
     })
@@ -46,8 +46,8 @@ export async function extractPersonScheduleFromPdf(input: ExtractPersonScheduleI
 
 const prompt = ai.definePrompt({
   name: 'extractPersonSchedulePrompt',
-  input: {schema: ExtractPersonScheduleInputSchema},
-  output: {schema: ExtractPersonScheduleOutputSchema},
+  input: { schema: ExtractPersonScheduleInputSchema },
+  output: { schema: ExtractPersonScheduleOutputSchema },
   prompt: `You are an expert at parsing work schedules from documents.
 Your task is to extract the work schedule for '{{{personName}}}'.
 
@@ -61,7 +61,7 @@ Strict Interpretation Rules:
 - Date Conversion (Spanish Months): 
   'ene' -> 01, 'feb' -> 02, 'mar' -> 03, 'abr' -> 04, 'may' -> 05, 'jun' -> 06,
   'jul' -> 07, 'ago' -> 08, 'sep' -> 09, 'oct' -> 10, 'nov' -> 11, 'dic' -> 12.
-- Final Date Format: ALWAYS DD-MM-YYYY. The year comes in the name of the file, for example '26 25ENE-20FEB.xlsx' 26 is the year 2026.
+- Final Date Format: ALWAYS YYYY-MM-DD. The year comes in the name of the file, for example '26 25ENE-20FEB.xlsx' 26 is the year 2026.
 - Shift 'T' (Tarde): Starts with 'T'. 'T1638' = 16:30 start, 8-hour shift (Output: '16:30 - 00:30').
 - Shift 'M' (Mañana): Starts with 'M'. 'M1008' = 10:00 start, 8-hour shift (Output: '10:00 - 18:00').
 - Off Days: If a cell is empty or contains 'L', 'V', or 'VAC', the person is 'Off'.
@@ -87,7 +87,7 @@ const extractPersonScheduleFlow = ai.defineFlow(
     outputSchema: ExtractPersonScheduleOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );
