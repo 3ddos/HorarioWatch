@@ -33,7 +33,9 @@ const ExtractPersonScheduleOutputSchema = z.object({
   schedule: z.array(
     z.object({
       day: z.string().describe("The full date in YYYY-MM-DD format."),
-      hours: z.string().describe("The calculated working hours (e.g., '16:30 - 00:30', 'Off')."),
+      start_time: z.string().describe("The full date in timestampz format."),
+      end_time: z.string().describe("The calculated end date in timestampz format."),
+      off: z.boolean().describe("True if the person is off, false otherwise."),
       rawCellData: z.string().describe("The raw text found in the cell (for debugging)."),
     })
   ).describe("An array of working days and hours for the specified person."),

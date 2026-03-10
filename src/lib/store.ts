@@ -2,12 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
-
-export interface User {
-  id: number | string;
-  email: string;
-  name: string;
-}
+import { User } from "./types";
+import { getCurrentUser } from "@/actions/auth";
 
 export interface Config {
   gmailUser: string;
@@ -18,8 +14,9 @@ export interface Config {
 }
 
 export interface ScheduleItem {
-  day: string;
-  hours: string;
+  off: boolean;
+  start_time: string;
+  end_time: string;
   rawCellData?: string;
 }
 
@@ -50,17 +47,21 @@ export function useAppStore() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Check localStorage for an existing session
-    const storedUser = localStorage.getItem('hw_user');
-    if (storedUser) {
+    async function loadUser() {
       try {
-        setUser(JSON.parse(storedUser));
+        const currentUser = await getCurrentUser();
+        if (currentUser && currentUser.id) {
+          setUser(currentUser);
+        } else {
+          setUser(null);
+        }
       } catch (e) {
-        console.error("Failed to parse stored user", e);
-        localStorage.removeItem('hw_user');
+        console.error("Failed to load user", e);
+      } finally {
+        setAuthLoaded(true);
       }
     }
-    setAuthLoaded(true);
+    loadUser();
   }, []);
 
   useEffect(() => {
@@ -153,10 +154,10 @@ export function useAppStore() {
       console.error('Error adding log:', error);
     } else if (log.schedule && log.schedule.length > 0) {
       // Also save the schedule into the 'schedule' table
-      const scheduleRecords = log.schedule.filter(item => item.hours !== "Off").map(item => ({
+      const scheduleRecords = log.schedule.filter(item => item.off === false).map(item => ({
         user_id: user?.id,
-        date: item.day,
-        time: item.hours.split("-")[0].trim(),
+        start_time: item.start_time,
+        end_time: item.end_time,
         title: log.emailSubject,
         description: item.rawCellData || ""
       }));
@@ -202,16 +203,9 @@ export function useAppStore() {
     if (error) console.error('Error deleting log:', error);
   };
 
-  const signOut = async () => {
-    setUser(null);
-    localStorage.removeItem('hw_user');
-    setIsLoaded(false);
-  };
-
   return {
     user,
     authLoaded,
-    signOut,
     config,
     saveConfig,
     logs,

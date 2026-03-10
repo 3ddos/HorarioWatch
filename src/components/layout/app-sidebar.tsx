@@ -17,14 +17,14 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
+import { logoutUser } from "@/actions/auth";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { signOut } = useAppStore();
   const router = useRouter();
 
   const menuItems = [
-    { title: "Dashboard", icon: LayoutDashboard, href: "/" },
+    { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
     { title: "Configuration", icon: Settings, href: "/config" },
     { title: "Activity History", icon: History, href: "/history" },
   ];
@@ -34,7 +34,7 @@ export function AppSidebar() {
   }
 
   const handleSignOut = async () => {
-    await signOut();
+    await logoutUser();
     router.push("/login");
   };
 

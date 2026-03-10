@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Calendar, Loader2 } from "lucide-react";
+import { registerUser } from '@/actions/auth';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -23,42 +23,27 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // First check if the user already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('email', email);
+    formData.append('password', password);
 
-    if (existingUser) {
-      setIsLoading(false);
+    const res = await registerUser(formData);
+    if (res?.error) {
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: "An account with this email already exists.",
-      });
-      return;
-    }
-
-    const { error } = await supabase
-      .from('users')
-      .insert([{ name, email, password }]); // Storing as plain text assumed from earlier discussion
-
-    setIsLoading(false);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: error.message || "Could not create user account.",
+        description: res.error,
       });
     } else {
       toast({
         title: "Registration Successful",
         description: "Your account has been created. You can now sign in.",
       });
-      router.push("/login");
+      router.push('/dashboard');
     }
+
+    setIsLoading(false);
   };
 
   return (

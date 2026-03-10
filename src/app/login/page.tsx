@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Calendar, Loader2 } from "lucide-react";
+import { loginUser } from '@/actions/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -22,28 +23,22 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, name')
-      .eq('email', email)
-      .eq('password', password)
-      .single();
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
 
-    setIsLoading(false);
-
-    if (error || !user) {
+    const res = await loginUser(formData);
+    if (res?.error) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password.",
+        description: res?.error,
       });
     } else {
-      // Save session securely locally
-      localStorage.setItem('hw_user', JSON.stringify(user));
-
-      // Force reload to let store pick up localStorage and update state universally
-      window.location.href = "/";
+      router.push('/dashboard');
     }
+
+    setIsLoading(false);
   };
 
   return (
