@@ -39,6 +39,23 @@ const DEFAULT_CONFIG: Config = {
   autoProcess: true,
 };
 
+const getColorByTime = (startTime: string) => {
+  const defaultEventColors = [
+    '#3b82f6', // blue
+    '#22c55e', // green
+    '#a855f7', // purple
+    '#ef4444', // red
+    '#f97316', // orange
+    '#06b6d4', // cyan
+  ];
+
+  const time = startTime.split('T')[1];
+  const hour = parseInt(time.split(':')[0], 10);
+  const index = Math.floor((hour - 6) / 2);
+  const colorIndex = Math.max(0, Math.min(index, defaultEventColors.length - 1));
+  return defaultEventColors[colorIndex];
+}
+
 export function useAppStore() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -158,8 +175,9 @@ export function useAppStore() {
         user_id: user?.id,
         start_time: item.start_time,
         end_time: item.end_time,
-        title: log.emailSubject,
-        description: item.rawCellData || ""
+        title: "LATAM",
+        description: item.rawCellData,
+        color: getColorByTime(item.start_time)
       }));
 
       const { error: scheduleError } = await supabase

@@ -11,6 +11,7 @@ import { extractPersonScheduleFromPdf } from "@/ai/flows/extract-person-schedule
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 import { parse, isSameDay, format } from "date-fns";
+import { extractPersonScheduleFromExcel } from "@/lib/excel-parser";
 
 export default function Dashboard() {
   const { config, logs, addLog, isLoaded, user } = useAppStore();
@@ -26,7 +27,7 @@ export default function Dashboard() {
     if (!lastSuccessfulLog) return [];
     return lastSuccessfulLog.schedule.map(item => {
       try {
-        return parse(item.day, "yyyy-MM-dd", new Date());
+        return parse(item.start_time.substring(0, 10), "yyyy-MM-dd", new Date());
       } catch (e) {
         return null;
       }
@@ -37,7 +38,7 @@ export default function Dashboard() {
     if (!lastSuccessfulLog || !selectedDate) return null;
     return lastSuccessfulLog.schedule.find(item => {
       try {
-        const itemDate = parse(item.day, "yyyy-MM-dd", new Date());
+        const itemDate = parse(item.start_time.substring(0, 10), "yyyy-MM-dd", new Date());
         return isSameDay(itemDate, selectedDate);
       } catch (e) {
         return false;
@@ -47,7 +48,7 @@ export default function Dashboard() {
 
   if (!isLoaded) return null;
 
-  const processFile = async (fileName: string, pdfDataUri?: string, textContent?: string) => {
+  const processFile = async (fileName: string, result: { schedule: any[], reasoning: string }) => {
     if (!user?.name) {
       toast({
         variant: "destructive",
@@ -60,12 +61,6 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     try {
-      const result = await extractPersonScheduleFromPdf({
-        pdfDataUri: pdfDataUri,
-        textContent: textContent,
-        personName: user.name
-      });
-
       addLog({
         id: Math.random().toString(36).substr(2, 9),
         timestamp: new Date().toISOString(),
@@ -86,7 +81,7 @@ export default function Dashboard() {
         toast({
           variant: "destructive",
           title: "No Schedule Found",
-          description: `Could not find a schedule for ${user.name} in the document.`,
+          description: result.reasoning,
         });
       }
     } catch (error) {
@@ -94,7 +89,7 @@ export default function Dashboard() {
       toast({
         variant: "destructive",
         title: "Processing Failed",
-        description: "An error occurred while parsing the document. Please check the logs.",
+        description: "An error occurred while parsing the document.",
       });
     } finally {
       setIsProcessing(false);
@@ -103,34 +98,48 @@ export default function Dashboard() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user?.name) return;
 
+    setIsProcessing(true);
     const fileExt = file.name.split('.').pop()?.toLowerCase();
 
-    if (fileExt === "pdf") {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64DataUri = e.target?.result as string;
-        await processFile(file.name, base64DataUri);
-      };
-      reader.readAsDataURL(file);
-    } else if (fileExt === "csv" || fileExt === "xlsx" || fileExt === "xls") {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const csvContent = XLSX.utils.sheet_to_csv(worksheet);
-        await processFile(file.name, undefined, csvContent);
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
+    try {
+      if (fileExt === "pdf") {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64DataUri = e.target?.result as string;
+          const result = await extractPersonScheduleFromPdf({
+            pdfDataUri: base64DataUri,
+            personName: user.name
+          });
+          await processFile(file.name, result);
+        };
+        reader.readAsDataURL(file);
+      } else if (fileExt === "csv" || fileExt === "xlsx" || fileExt === "xls") {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const result = extractPersonScheduleFromExcel(workbook, user.name, file.name);
+          await processFile(file.name, result);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Invalid File Type",
+          description: "Please upload a PDF, CSV, or XLSX document.",
+        });
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error(error);
       toast({
         variant: "destructive",
-        title: "Invalid File Type",
-        description: "Please upload a PDF, CSV, or XLSX document.",
+        title: "Upload Failed",
+        description: "An error occurred while reading the file.",
       });
+      setIsProcessing(false);
     }
 
     if (fileInputRef.current) {
@@ -139,8 +148,20 @@ export default function Dashboard() {
   };
 
   const simulateProcessing = async () => {
-    const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjQKJ...[rest of dummy pdf data]";
-    await processFile("Simulated Schedule.pdf", dummyPdfUri);
+    if (!user?.name) return;
+    setIsProcessing(true);
+    try {
+      const dummyPdfUri = "data:application/pdf;base64,JVBERi0xLjQKJ...[rest of dummy pdf data]";
+      const result = await extractPersonScheduleFromPdf({
+        pdfDataUri: dummyPdfUri,
+        personName: user.name
+      });
+      await processFile("Simulated Schedule.pdf", result);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -203,7 +224,7 @@ export default function Dashboard() {
           <CardContent>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              Scanning for: {config.senderFilter}
+              Scanning for: {user?.email}
             </p>
           </CardContent>
         </Card>
@@ -268,7 +289,11 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between p-6 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
                           <div className="space-y-1">
                             <span className="text-xs uppercase tracking-wider opacity-80">Working Hours</span>
-                            <div className="text-2xl font-bold">{selectedShift.hours}</div>
+                            {selectedShift.off ? (
+                              <div className="text-2xl font-bold">Off</div>
+                            ) : (
+                              <div className="text-2xl font-bold">{selectedShift.start_time.split('T')[1].split('+')[0]}</div>
+                            )}
                           </div>
                           <div className="bg-white/20 p-3 rounded-full">
                             <Clock className="w-6 h-6" />

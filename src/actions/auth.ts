@@ -123,7 +123,6 @@ export async function loginUser(formData: FormData) {
 }
 
 export async function logoutUser() {
-    console.log('logoutUser')
     const cookieStore = await cookies();
     cookieStore.delete('session_id');
     cookieStore.delete('session_user');
