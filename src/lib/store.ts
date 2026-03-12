@@ -177,7 +177,8 @@ export function useAppStore() {
         end_time: item.end_time,
         title: "LATAM",
         description: item.rawCellData,
-        color: getColorByTime(item.start_time)
+        color: getColorByTime(item.start_time),
+        repeat: false
       }));
 
       const { error: scheduleError } = await supabase
