@@ -42,7 +42,7 @@ function extractYearFromFileName(fileName: string): number {
 }
 
 /**
- * Parses a shift code like 'T1638' or 'M1008'
+ * Parses a shift code like 'T1638' or 'M1008' or 'M1008C'
  */
 function parseShift(shiftCode: string, dateStr: string): { start: string; end: string; off: boolean } | null {
     const trimmed = shiftCode.trim().toUpperCase();
@@ -53,7 +53,8 @@ function parseShift(shiftCode: string, dateStr: string): { start: string; end: s
 
     // Expected format: [T|M][HH][M][D]
     // e.g., T1638 -> T, 16, 3 (30 mins), 8 (8 hours)
-    const match = trimmed.match(/^([TM])(\d{2})(\d)(\d)$/);
+    // also supports optional trailing letter like M1008C
+    const match = trimmed.match(/^([TM])(\d{2})(\d)(\d)[A-Z]?$/);
     if (!match) {
         return { start: dateStr, end: dateStr, off: true };
     }
